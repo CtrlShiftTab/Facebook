@@ -1,0 +1,112 @@
+ <html>
+	<head>
+	<link href='http://fonts.googleapis.com/css?family=PT+Sans' rel='stylesheet' type='text/css'>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/magnific-popup.js/1.0.0/magnific-popup.min.css">
+	<link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.4/styles/pojoaque.min.css">
+	<link rel="stylesheet" href="./example.css">
+	<link rel="stylesheet" href="./Styles/Grid/grid.css">
+	
+	
+	
+	</head>
+	<body>
+	
+	<H2>FACEBOOK PUBLIC PAGES CUSTOM IMAGE SCRAPER</h2>
+	<form action="">
+	<p>Please input a Facebook UserID (for now we use this Facebook UserID: 99206759699)<br>
+	Find yours and other users UserId <A HREF="http://findmyfbid.com/" target="new">here</A><br> 
+	<input type='text' id='myUserID' value="99206759699" /><br><br>
+	Please input a Facebook Access Token. To obtain one, log in to Facebook and go to <A HREF="https://developers.facebook.com/" target="new">Facebook Developers</a><br>
+	Under MyApps, add a new app. Then click Tools & Support and navigate to Graph API Explorer. <br>
+	There you will find your Access Token. NOTE: the token will only be valid for about an hour so you might have to generate a new  one after a while..<br>
+	<input type='text' id='myAccessToken' value="" /><br><br>
+	<p>Please input max number of images<br>
+	<input type='text' id='maxPix' value="0" /><br><br>
+	<input id="dI" type='button' onclick='disPlayImages()' value='Display images' /><br><br>
+	<input id="dJ" type='button' onclick='disPlayJSON()' value='Display JSON' /><br>
+	<p>Reloads the current page from the server and not from cache<br>
+	<input type='button' onclick='location.reload(true)' value='Reload page' />
+	</form>
+	<br>
+	<p>TODO:<br>
+	- Kargoe should get proper Facebook developer account to get account token which not times out!<br>
+	- fix functionality with UserID retrieval, right now we use a hack with someones else PHP<br>
+	- put in loading status<br>
+	- some other small bugs<br>
+	<br>
+	
+	<div class="instaBlock" id="kargoeBlock"></div>
+
+<script>     	
+		var userId = "";
+		var albumIds = [];
+		var photoIds =  [];
+		var photoSources = [];
+		var counter = 0;
+		maxImg = 50;
+		var accessToken = '';
+		document.getElementById("dJ").disabled = true;
+		//---------------------------------------------------------------------------		
+		function disPlayImages(){
+	
+			if(myUserID.value != "" && myAccessToken.value != ""){ 
+				var foo = document.getElementById("kargoeBlock");
+				if (foo.hasChildNodes()) {foo.removeChild(foo.childNodes[0]);}
+				userId = document.getElementById('myUserID').value;
+				accessToken = document.getElementById('myAccessToken').value;
+				maxImg = parseInt(document.getElementById('maxPix').value);
+				getAlbums();
+			}else{
+				alert("Would you please enter some data?")
+			}
+			this.jsn = false;
+		}
+
+		function disPlayJSON(){			
+			this.jsn = true;
+			displayInstaBlocks();
+		}		
+		//-----------------------------------------------------------------------------
+		function getAlbums(){
+		if(maxImg === 0){alert("You cant load zero pictures!! Please input a number betweeb 1 and 100.");return;}
+		document.getElementById("dI").disabled = true;
+			$.getJSON("https://graph.facebook.com/v2.5/" + userId + "/albums?fields=id&access_token=" + accessToken,
+			function(response){ 			
+				var result = JSON.parse(JSON.stringify(response));
+				$.each(result.data, function(index, value) {albumIds.push(result.data[index].id);})
+				getPhotoIds();
+			});
+		}
+		//--------------------------------------------------------------------------------------------------------------		
+		function getPhotoIds(){
+			$.when($.getJSON("https://graph.facebook.com/v2.5/" + albumIds[counter] + "/photos?&access_token=" + accessToken)).then(function(response){ 			
+			var result = JSON.parse(JSON.stringify(response));
+				for (var i = 0; i < result.data.length; i++){photoIds.push(result.data[i].id);}
+				counter++;
+				if(counter < albumIds.length){getPhotoIds();}else{counter=0;getImagesSources();}
+			});			
+		 }
+		 //--------------------------------------------------------------------------------------------------------------
+		function getImagesSources(){
+			$.when($.getJSON("https://graph.facebook.com/v2.4/" + photoIds[counter] + "?fields=images&access_token=" + accessToken)).then(function(response){
+			var result = JSON.parse(JSON.stringify(response));
+			for (var i = 0; i < result.images.length; i++){
+				if(result.images[i].height <= 400 && result.images[i].height >= 300){photoSources.push(result.images[i].source);}}					
+				counter++;				
+				if(counter > maxImg){
+				console.log("photoSources.toString() and counter: " + counter + " " + photoSources.toString());displayInstaBlocks();return;}
+				if(counter < photoIds.length){getImagesSources();}else{counter=0; console.log("photoSources.toString() and counter: " + counter + " " + photoSources.toString());}
+			});
+		}
+        </script>		
+		
+		<script src="http://code.jquery.com/jquery-1.11.2.min.js"></script>
+		<script src="http://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.4/highlight.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/magnific-popup.js/1.0.0/jquery.magnific-popup.min.js"></script>
+		<script src="./fbfetch.js"></script>
+		<script src="./example.js"></script>		
+		<script src="./Styles/Grid/grid.js"></script>
+		<script>hljs.initHighlightingOnLoad();</script>
+		
+	</body>
+</html>
